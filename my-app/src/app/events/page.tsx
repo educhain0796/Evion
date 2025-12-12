@@ -6,6 +6,7 @@ import { ethers } from "ethers";
 import { BrowserProvider } from "ethers";
 import Token from "../contractInfo/contractAbi.json"
 import contractAddress from "../contractInfo/contract.json"
+import { toast } from "sonner";
 
 interface Event {
   id: string;
@@ -100,28 +101,73 @@ const EventsPage = () => {
     setIsModalOpen(true);
   };
 
-  const handleJoinEvent = (event: Event) => {
-    // Here you would typically handle the join logic
-    alert(`Joined event: ${event.name}`);
-    setIsModalOpen(false);
-    mint()
+  const handleJoinEvent = async (event: Event) => {
+    try {
+      if (!window.ethereum) {
+        toast.error("Please install MetaMask to join events.");
+        return;
+      }
+
+      const provider = new BrowserProvider(window.ethereum);
+      await provider.send("eth_requestAccounts", []);
+      const signer = await provider.getSigner();
+      const address = await signer.getAddress();
+
+      const loadingToast = toast.loading("Joining event... Please confirm the transaction in MetaMask.");
+
+      // Mint tokens as reward for joining
+      const receipt = await mint("5", signer);
+
+      if (receipt && receipt.hash) {
+        const blockExplorerUrl = `https://aeneid.storyscan.io/tx/${receipt.hash}`;
+        toast.success(
+          <div>
+            <p className="font-semibold">Successfully joined {event.name}!</p>
+            <p className="text-sm mt-1">You received 5 EVO tokens as a reward.</p>
+            <a
+              href={blockExplorerUrl}
+              target="_blank"
+              rel="noopener noreferrer"
+              className="text-blue-400 hover:text-blue-300 underline text-sm mt-1 block"
+            >
+              View transaction on block explorer →
+            </a>
+          </div>,
+          { id: loadingToast, duration: 8000 }
+        );
+      } else {
+        toast.success(`Successfully joined ${event.name}!`, { id: loadingToast });
+      }
+
+      setIsModalOpen(false);
+    } catch (error) {
+      console.error("Failed to join event:", error);
+      const message = error instanceof Error ? error.message : "Unknown error";
+      toast.error(`Failed to join event: ${message}`);
+    }
   };
 
-  const mint = async (a = "5") => {
-    const abi = Token.abi;
-    const charge = a;
-    console.log(charge, "=========deposit=========");
-    // const contractAddress = "0xcA03Dc4665A8C3603cb4Fd5Ce71Af9649dC00d44"
-    const provider = new BrowserProvider(window.ethereum);
-    const signer = await provider.getSigner()
-    const address = await signer.getAddress()
-    const questContract = new ethers.Contract(contractAddress.address, abi, signer)
-    // mint();
-    // console.log(balance, "========inside withdraw===")
+  const mint = async (a = "5", externalSigner?: ethers.Signer) => {
+    try {
+      const abi = Token.abi;
+      const charge = a;
+      
+      if (!window.ethereum && !externalSigner) {
+        throw new Error("MetaMask is not installed");
+      }
 
-    await (await questContract.mint(address, ethers.parseUnits(parseInt(charge).toString(), 18))).wait();
-    // alert('Withdraw your earned EVO coins!');
-    // await (await bounceContract.transfer(address, ethers.utils.parseUnits(charge.toString(), 18))).wait();
+      const signer = externalSigner ?? await new BrowserProvider(window.ethereum).getSigner();
+      const address = await signer.getAddress();
+      const questContract = new ethers.Contract(contractAddress.address, abi, signer);
+
+      const tx = await questContract.mint(address, ethers.parseUnits(parseInt(charge).toString(), 18));
+      const receipt = await tx.wait();
+      
+      return receipt;
+    } catch (error) {
+      console.error("Mint error:", error);
+      throw error;
+    }
   }
 
   return (
