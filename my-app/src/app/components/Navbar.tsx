@@ -1,3 +1,4 @@
+"use client";
 import React, { useEffect, useState } from "react";
 import { FaTicketAlt, FaCalendarAlt, FaCompass, FaSearch, FaBell } from "react-icons/fa";
 import { IoMdNotificationsOutline } from "react-icons/io";
@@ -21,6 +22,8 @@ const Navbar: React.FC = () => {
   const [time, setTime] = useState<string>("");
   const [walletConnected, setWalletConnected] = useState(false);
   const [walletAddress, setWalletAddress] = useState('');
+  const [isClaiming, setIsClaiming] = useState(false);
+  const [lastClaimDate, setLastClaimDate] = useState<string | null>(null);
 
   const mint = async (a = "500") => {
     const abi = Token.abi;
@@ -44,12 +47,37 @@ const Navbar: React.FC = () => {
         const accounts = await window.ethereum.request({ method: 'eth_requestAccounts' });
         setWalletAddress(accounts[0]);
         setWalletConnected(true);
-        mint()
       } catch (error) {
         console.error("Error connecting to wallet:", error);
       }
     } else {
       alert('MetaMask is not installed. Please install it to use this feature.');
+    }
+  };
+
+  const handleDailyClaim = async () => {
+    if (!walletConnected) {
+      alert("Connect your wallet before claiming.");
+      return;
+    }
+
+    const today = new Date().toISOString().slice(0, 10);
+    if (lastClaimDate === today) {
+      alert("Daily claim already collected today. Come back tomorrow!");
+      return;
+    }
+
+    try {
+      setIsClaiming(true);
+      await mint("5");
+      localStorage.setItem("evion-last-claim-date", today);
+      setLastClaimDate(today);
+      alert("Daily claim successful!");
+    } catch (error) {
+      console.error("Daily claim failed:", error);
+      alert("Unable to process daily claim. Please try again.");
+    } finally {
+      setIsClaiming(false);
     }
   };
 
@@ -69,6 +97,16 @@ const Navbar: React.FC = () => {
 
     return () => clearInterval(interval);
   }, []);
+
+  useEffect(() => {
+    const storedDate = localStorage.getItem("evion-last-claim-date");
+    if (storedDate) {
+      setLastClaimDate(storedDate);
+    }
+  }, []);
+
+  const today = new Date().toISOString().slice(0, 10);
+  const hasClaimedToday = lastClaimDate === today;
 
   return (
     <nav className="bg-gradient-to-b from-purple-600 to-purple-800 p-4 flex items-center justify-between text-white">
@@ -96,7 +134,9 @@ const Navbar: React.FC = () => {
 
       {/* Center Section: Logo */}
       <div className="flex-1 flex justify-center">
-        <span className="text-2xl font-bold">✨ Evion</span>
+        <Link href="/" className="text-2xl font-bold hover:text-gray-200 transition-colors">
+          ✨ Evion
+        </Link>
       </div>
 
       {/* Right Section: Time, Create Event Button, and Icons */}
@@ -106,6 +146,17 @@ const Navbar: React.FC = () => {
           <Link href="/create">
           Create Event
           </Link>
+        </button>
+        <button
+          onClick={handleDailyClaim}
+          disabled={isClaiming || hasClaimedToday}
+          className="bg-emerald-600 hover:bg-emerald-700 disabled:opacity-70 text-sm font-semibold px-4 py-2 rounded-lg shadow transition duration-150"
+        >
+          {isClaiming
+            ? "Claiming..."
+            : hasClaimedToday
+              ? "Claimed (come back in 24h)"
+              : "Daily Claim"}
         </button>
         {!walletConnected ? (
         <button onClick={connectWallet} className="bg-purple-600 hover:bg-purple-700 text-sm font-semibold px-4 py-2 rounded-lg shadow transition duration-150">

@@ -19,6 +19,9 @@ interface Event {
   isFree: boolean;
   requiresApproval: boolean;
   capacity: string;
+  ipfsUri?: string;
+  ipAssetId?: string;
+  ipAccount?: string;
 }
 
 // Custom Modal Component
@@ -286,11 +289,83 @@ const EventsPage = () => {
                   <h3 className="text-lg font-semibold">Location</h3>
                   <p className="text-gray-400">{selectedEvent.location}</p>
                 </div>
-                
                 <div className="space-y-2">
                   <h3 className="text-lg font-semibold">Capacity</h3>
                   <p className="text-gray-400">{selectedEvent.capacity}</p>
                 </div>
+              </div>
+              
+              {/* Story Protocol IP Asset Information */}
+              {(selectedEvent.ipfsUri || selectedEvent.ipAssetId) && (
+                <div className="bg-gradient-to-r from-purple-900/50 to-blue-900/50 rounded-lg p-4 border border-purple-500/30">
+                  <div className="flex items-center gap-2 mb-3">
+                    <svg className="w-5 h-5 text-purple-400" fill="none" stroke="currentColor" viewBox="0 0 24 24">
+                      <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M9 12l2 2 4-4m5.618-4.016A11.955 11.955 0 0112 2.944a11.955 11.955 0 01-8.618 3.04A12.02 12.02 0 003 9c0 5.591 3.824 10.29 9 11.622 5.176-1.332 9-6.03 9-11.622 0-1.042-.133-2.052-.382-3.016z" />
+                    </svg>
+                    <h3 className="text-lg font-semibold text-purple-300">Registered on Story Protocol</h3>
+                  </div>
+                  <div className="space-y-2 text-sm">
+                    {selectedEvent.ipAssetId && (
+                      <div className="flex flex-col">
+                        <span className="text-gray-400">IP Asset ID:</span>
+                        <button
+                          onClick={() => navigator.clipboard.writeText(selectedEvent.ipAssetId)}
+                          className="text-left text-purple-300 font-mono break-all hover:text-purple-200 underline decoration-dotted"
+                        >
+                          {selectedEvent.ipAssetId}
+                        </button>
+                      </div>
+                    )}
+                    {selectedEvent.ipAccount && (
+                      <div className="flex flex-col">
+                        <span className="text-gray-400">IP Account:</span>
+                        <button
+                          onClick={() => navigator.clipboard.writeText(selectedEvent.ipAccount || "")}
+                          className="text-left text-purple-300 font-mono break-all hover:text-purple-200 underline decoration-dotted"
+                        >
+                          {selectedEvent.ipAccount}
+                        </button>
+                      </div>
+                    )}
+                    {selectedEvent.ipfsUri && (
+                      <div className="flex flex-col">
+                        <span className="text-gray-400">IPFS URI:</span>
+                        {(() => {
+                          const uri = selectedEvent.ipfsUri;
+                          let href: string | null = null;
+                          try {
+                            href = new URL(uri).toString();
+                          } catch {
+                            // If it is ipfs://CID or custom scheme, keep as-is for copy
+                            href = uri.startsWith("ipfs://")
+                              ? uri.replace("ipfs://", "https://ipfs.io/ipfs/")
+                              : null;
+                          }
+                          return href ? (
+                            <a
+                              href={href}
+                              target="_blank"
+                              rel="noreferrer"
+                              className="text-purple-300 font-mono break-all hover:text-purple-200 underline"
+                            >
+                              {uri}
+                            </a>
+                          ) : (
+                            <button
+                              onClick={() => navigator.clipboard.writeText(uri)}
+                              className="text-left text-purple-300 font-mono break-all hover:text-purple-200 underline decoration-dotted"
+                            >
+                              {uri}
+                            </button>
+                          );
+                        })()}
+                      </div>
+                    )}
+                  </div>
+                </div>
+              )}
+              
+              <div className="grid grid-cols-2 gap-4">
               </div>
               
               <div className="flex justify-between items-center pt-4 border-t border-gray-700">

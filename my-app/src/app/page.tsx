@@ -1,13 +1,11 @@
 "use client"
 import React from "react";
-import Navbar from "./components/Navbar";
 import CalendarSection from "./components/CalenderSection";
 import Footer from "./components/Footer";
 
 const Home: React.FC = () => {
   return (
     <div className="bg-gradient-to-b from-purple-700 via-black to-black min-h-screen text-white">
-      <Navbar />
       <div className="max-w-7xl mx-auto py-16 px-8 space-y-16">
         {/* Title and Description */}
         <section className="text-center space-y-4">
